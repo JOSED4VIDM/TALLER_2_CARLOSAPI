@@ -25,13 +25,14 @@ def product_detail(request, product_id):
     except CoreAPIError as exc:
         messages.error(request, str(exc))
         return redirect("catalog")
-    form = OrderForm(request.POST or None)
+    form = OrderForm(product, request.POST or None)
     if request.method == "POST":
         if not request.user.is_authenticated:
             return redirect("login")
         if request.user.is_staff:
             return HttpResponseForbidden("Las cuentas administradoras no realizan pedidos.")
         if form.is_valid():
+            variant = product["variants"][int(form.cleaned_data["variant"])]
             try:
                 require_core_token()
                 request_core(
@@ -42,6 +43,8 @@ def product_detail(request, product_id):
                         "items": [
                             {
                                 "product_id": product_id,
+                                "size": variant["size"],
+                                "color": variant["color"],
                                 "quantity": form.cleaned_data["quantity"],
                             }
                         ]
@@ -108,6 +111,8 @@ def product_create(request):
             require_core_token()
             payload = form.cleaned_data.copy()
             payload["price"] = float(payload["price"])
+            if not payload["image_url"]:
+                payload["image_url"] = None
             request_core("POST", "/products", json=payload)
         except CoreAPIError as exc:
             messages.error(request, str(exc))
@@ -126,12 +131,19 @@ def product_edit(request, product_id):
     except CoreAPIError as exc:
         messages.error(request, str(exc))
         return redirect("admin-products")
-    form = ProductForm(request.POST or None, initial=product)
+    initial = product.copy()
+    initial["variants"] = "\n".join(
+        f"{variant['size']}, {variant['color']}, {variant['stock']}"
+        for variant in product["variants"]
+    )
+    form = ProductForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
             require_core_token()
             payload = form.cleaned_data.copy()
             payload["price"] = float(payload["price"])
+            if not payload["image_url"]:
+                payload["image_url"] = None
             request_core("PATCH", f"/products/{product_id}", json=payload)
         except CoreAPIError as exc:
             messages.error(request, str(exc))

@@ -1,11 +1,11 @@
-# TechGear — catálogo y pedidos híbridos
+# UNDERGRAWN | JOSE_DM — tienda de ropa
 
-Aplicación con FastAPI como API de catálogo/pedidos en MongoDB y Django como interfaz MVT con autenticación de usuarios. El código está separado entre `backend/` y `frontend/`.
+Tienda minimalista de ropa construida como aplicación híbrida: FastAPI administra prendas, inventario por talla/color y pedidos en MongoDB; Django proporciona la interfaz MVT y la autenticación de clientes y administradores. El código está separado entre `backend/` y `frontend/`.
 
 ## Roles
 
 - **Cliente:** se registra en Django, consulta el catálogo, realiza pedidos y consulta su historial.
-- **Administrador:** cuenta Django con `is_staff=True`. Puede crear, editar y desactivar productos desde la interfaz web.
+- **Administrador:** cuenta Django con `is_staff=True`. Puede crear, editar y desactivar prendas desde la interfaz web, especificando stock para cada combinación de talla y color.
 - Las rutas de escritura de FastAPI requieren el secreto compartido; Django conserva ese valor en el servidor y nunca lo expone en el navegador. Las cuentas se almacenan en la base SQL de Django; productos y pedidos, en MongoDB.
 
 ## Desarrollo local
@@ -52,11 +52,11 @@ Requiere Python 3.11 o posterior y MongoDB local o una URI de MongoDB Atlas.
 | `POST` | `/products` | Crear producto | Token de administrador |
 | `PATCH` | `/products/{product_id}` | Editar producto | Token de administrador |
 | `DELETE` | `/products/{product_id}` | Desactivar producto | Token de administrador |
-| `POST` | `/orders?customer={username}` | Registrar pedido con inventario disponible | Token de servicio |
+| `POST` | `/orders?customer={username}` | Registrar pedido de una talla y color disponibles | Token de servicio |
 | `GET` | `/orders?customer={username}` | Consultar pedidos de un cliente | Token de servicio |
 | `GET` | `/health` | Comprobar conexión con MongoDB | Público |
 
-Para operaciones protegidas se envía `X-Admin-Token` o `X-Client-Token`, según la ruta. La cantidad y los precios del pedido se calculan en la API, no se confía en precios enviados por el cliente. Los pedidos guardan una copia del precio y nombre del producto al momento de la compra.
+Para operaciones protegidas se envía `X-Admin-Token` o `X-Client-Token`, según la ruta. Al crear prendas, cada variante se registra con talla, color y stock propio. Al comprar, la API reserva las unidades de esa variante de forma atómica; no se confía en precios enviados por el cliente. Los pedidos guardan una copia del precio, nombre, talla y color elegidos al momento de la compra.
 
 ## Pruebas y controles
 

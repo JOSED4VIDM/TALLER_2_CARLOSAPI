@@ -1,15 +1,22 @@
 {% extends "catalog/base.html" %}
-{% block title %}Catálogo | TechGear{% endblock %}
+{% block title %}Colección | UNDERGRAWN{% endblock %}
 {% block content %}
-<h1>Catálogo TechGear</h1>
+<header class="page-heading">
+  <p class="muted">ROPA PARA TODOS LOS DÍAS</p>
+  <h1>La colección</h1>
+</header>
 {% if products %}
   <div class="grid">
     {% for product in products %}
       <article class="card">
-        <h2><a href="{% url 'product-detail' product.id %}">{{ product.name }}</a></h2>
-        <p>{{ product.category }} · ${{ product.price }}</p>
-        <p>{{ product.description|truncatechars:140 }}</p>
-        <p>Unidades disponibles: {{ product.stock }}</p>
+        <a href="{% url 'product-detail' product.id %}">
+          {% if product.image_url %}<img class="product-image" src="{{ product.image_url }}" alt="{{ product.name }}">{% else %}<div class="product-image"></div>{% endif %}
+          <div class="product-info">
+            <p class="product-meta">{{ product.category }}</p>
+            <h2>{{ product.name }}</h2>
+            <p class="price">${{ product.price }}</p>
+          </div>
+        </a>
       </article>
     {% endfor %}
   </div>

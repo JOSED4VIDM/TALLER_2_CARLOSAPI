@@ -32,8 +32,8 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(
-    title="TechGear API",
-    description="API de catálogo e pedidos de TechGear.",
+    title="UNDERGRAWN | JOSE_DM API",
+    description="API de prendas, variantes e pedidos.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -137,42 +137,71 @@ async def create_order(
     customer: str = Query(min_length=1, max_length=150),
     database: AsyncDatabase = Depends(get_database),
 ) -> dict:
-    quantities: dict[str, int] = {}
+    quantities: dict[tuple[str, str, str], int] = {}
     for item in order.items:
-        quantities[item.product_id] = quantities.get(item.product_id, 0) + item.quantity
+        key = (item.product_id, item.size, item.color)
+        quantities[key] = quantities.get(key, 0) + item.quantity
 
     products: list[dict] = []
     try:
-        for product_id, quantity in quantities.items():
+        for (product_id, size, color), quantity in quantities.items():
             product = await database.products.find_one_and_update(
-                {"_id": product_id, "active": True, "stock": {"$gte": quantity}},
-                {"$inc": {"stock": -quantity}},
+                {
+                    "_id": product_id,
+                    "active": True,
+                    "variants": {
+                        "$elemMatch": {
+                            "size": size,
+                            "color": color,
+                            "stock": {"$gte": quantity},
+                        }
+                    },
+                },
+                {"$inc": {"variants.$.stock": -quantity}},
                 return_document=ReturnDocument.AFTER,
             )
             if product is None:
                 raise HTTPException(
                     status_code=409,
-                    detail=f"Product {product_id} is unavailable or has insufficient stock",
+                    detail=f"Variant {size}/{color} is unavailable or has insufficient stock",
                 )
-            products.append(product)
+            products.append(
+                {
+                    "product": product,
+                    "size": size,
+                    "color": color,
+                    "quantity": quantity,
+                }
+            )
     except Exception:
         for reserved in products:
             await database.products.update_one(
-                {"_id": reserved["_id"]},
-                {"$inc": {"stock": quantities[reserved["_id"]]}},
+                {
+                    "_id": reserved["product"]["_id"],
+                    "variants": {
+                        "$elemMatch": {
+                            "size": reserved["size"],
+                            "color": reserved["color"],
+                        }
+                    },
+                },
+                {"$inc": {"variants.$.stock": reserved["quantity"]}},
             )
         raise
 
-    product_by_id = {product["_id"]: product for product in products}
     items = [
         OrderItemOut(
-            product_id=product_id,
-            name=product_by_id[product_id]["name"],
-            quantity=quantity,
-            unit_price=product_by_id[product_id]["price"],
-            subtotal=round(product_by_id[product_id]["price"] * quantity, 2),
+            product_id=reservation["product"]["_id"],
+            name=reservation["product"]["name"],
+            size=reservation["size"],
+            color=reservation["color"],
+            quantity=reservation["quantity"],
+            unit_price=reservation["product"]["price"],
+            subtotal=round(
+                reservation["product"]["price"] * reservation["quantity"], 2
+            ),
         )
-        for product_id, quantity in quantities.items()
+        for reservation in products
     ]
     document = {
         "_id": str(uuid4()),
@@ -185,9 +214,13 @@ async def create_order(
     try:
         await database.orders.insert_one(document)
     except Exception:
-        for product_id, quantity in quantities.items():
+        for (product_id, size, color), quantity in quantities.items():
             await database.products.update_one(
-                {"_id": product_id}, {"$inc": {"stock": quantity}}
+                {
+                    "_id": product_id,
+                    "variants": {"$elemMatch": {"size": size, "color": color}},
+                },
+                {"$inc": {"variants.$.stock": quantity}},
             )
         raise
     document["id"] = document.pop("_id")
