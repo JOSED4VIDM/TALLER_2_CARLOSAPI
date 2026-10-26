@@ -1,0 +1,20 @@
+{% extends "catalog/base.html" %}
+{% block title %}Gestión de productos | TechGear{% endblock %}
+{% block content %}
+<h1>Gestión de productos</h1>
+<p><a href="{% url 'product-create' %}">Agregar producto</a></p>
+<div class="grid">
+{% for product in products %}
+  <article class="card">
+    <h2>{{ product.name }}</h2>
+    <p>{{ product.category }} · ${{ product.price }} · Stock: {{ product.stock }}</p>
+    <a href="{% url 'product-edit' product.id %}">Editar</a>
+    <form method="post" action="{% url 'product-delete' product.id %}">
+      {% csrf_token %}<button type="submit">Desactivar</button>
+    </form>
+  </article>
+{% empty %}
+  <p>No hay productos activos.</p>
+{% endfor %}
+</div>
+{% endblock %}

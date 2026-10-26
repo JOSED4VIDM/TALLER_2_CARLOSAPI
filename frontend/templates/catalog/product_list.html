@@ -1,0 +1,19 @@
+{% extends "catalog/base.html" %}
+{% block title %}Catálogo | TechGear{% endblock %}
+{% block content %}
+<h1>Catálogo TechGear</h1>
+{% if products %}
+  <div class="grid">
+    {% for product in products %}
+      <article class="card">
+        <h2><a href="{% url 'product-detail' product.id %}">{{ product.name }}</a></h2>
+        <p>{{ product.category }} · ${{ product.price }}</p>
+        <p>{{ product.description|truncatechars:140 }}</p>
+        <p>Unidades disponibles: {{ product.stock }}</p>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No hay productos disponibles en este momento.</p>
+{% endif %}
+{% endblock %}

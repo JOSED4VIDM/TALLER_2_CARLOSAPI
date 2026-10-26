@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TechGear{% endblock %}</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#172033}
+    nav{display:flex;gap:1rem;align-items:center;border-bottom:1px solid #ddd;padding-bottom:1rem}
+    nav form{display:inline;margin:0}a{color:#0759a5}button{cursor:pointer;padding:.5rem .8rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+    .card,section{border:1px solid #ddd;border-radius:8px;padding:1rem;margin:1rem 0}
+    .messages{padding:0;list-style:none}.messages li{padding:.7rem;background:#eef5ff;margin:.4rem 0}
+    label{display:block;margin:.7rem 0}input,textarea{display:block;max-width:100%;padding:.5rem}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="{% url 'catalog' %}">TechGear</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'orders' %}">Mis pedidos</a>
+      {% if user.is_staff %}<a href="{% url 'admin-products' %}">Gestionar productos</a>{% endif %}
+      <span>{{ user.username }}</span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form>
+    {% else %}
+      <a href="{% url 'login' %}">Ingresar</a>
+      <a href="{% url 'register' %}">Crear cuenta</a>
+    {% endif %}
+  </nav>
+  {% if messages %}<ul class="messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

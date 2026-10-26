@@ -1,0 +1,83 @@
+# TechGear — catálogo y pedidos híbridos
+
+Aplicación con FastAPI como API de catálogo/pedidos en MongoDB y Django como interfaz MVT con autenticación de usuarios. El código está separado entre `backend/` y `frontend/`.
+
+## Roles
+
+- **Cliente:** se registra en Django, consulta el catálogo, realiza pedidos y consulta su historial.
+- **Administrador:** cuenta Django con `is_staff=True`. Puede crear, editar y desactivar productos desde la interfaz web.
+- Las rutas de escritura de FastAPI requieren el secreto compartido; Django conserva ese valor en el servidor y nunca lo expone en el navegador. Las cuentas se almacenan en la base SQL de Django; productos y pedidos, en MongoDB.
+
+## Desarrollo local
+
+Requiere Python 3.11 o posterior y MongoDB local o una URI de MongoDB Atlas.
+
+1. Crea y activa un entorno virtual, luego instala las dependencias:
+
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r backend\requirements.txt
+   pip install -r frontend\requirements.txt
+   ```
+
+2. Configura `backend/.env` desde `backend/.env.example`, indicando `MONGODB_URL`, `MONGODB_DATABASE` y `ADMIN_API_TOKEN`.
+3. Configura `frontend/.env` desde `frontend/.env.example`. `CORE_API_TOKEN` debe ser el mismo valor que `ADMIN_API_TOKEN`.
+4. Inicia la API en una terminal:
+
+   ```powershell
+   cd backend
+   uvicorn app.main:app --reload
+   ```
+
+   Swagger UI estará en `http://127.0.0.1:8000/docs`.
+
+5. En otra terminal, aplica migraciones y crea un usuario administrador:
+
+   ```powershell
+   cd frontend
+   python manage.py migrate
+   python manage.py createsuperuser
+   python manage.py runserver
+   ```
+
+   La tienda estará en `http://127.0.0.1:8001` (la API usa el puerto 8000).
+
+## API principal
+
+| Método | Ruta | Uso | Acceso |
+|---|---|---|---|
+| `GET` | `/products` | Listar productos activos; filtro opcional `category` | Público |
+| `GET` | `/products/{product_id}` | Consultar producto | Público |
+| `POST` | `/products` | Crear producto | Token de administrador |
+| `PATCH` | `/products/{product_id}` | Editar producto | Token de administrador |
+| `DELETE` | `/products/{product_id}` | Desactivar producto | Token de administrador |
+| `POST` | `/orders?customer={username}` | Registrar pedido con inventario disponible | Token de servicio |
+| `GET` | `/orders?customer={username}` | Consultar pedidos de un cliente | Token de servicio |
+| `GET` | `/health` | Comprobar conexión con MongoDB | Público |
+
+Para operaciones protegidas se envía `X-Admin-Token` o `X-Client-Token`, según la ruta. La cantidad y los precios del pedido se calculan en la API, no se confía en precios enviados por el cliente. Los pedidos guardan una copia del precio y nombre del producto al momento de la compra.
+
+## Pruebas y controles
+
+Desde la raíz del proyecto:
+
+```powershell
+python -m pip install -r backend\requirements.txt
+python -m pip install -r frontend\requirements.txt
+python -m pytest backend\tests
+python frontend\manage.py check
+```
+
+## Render
+
+`render.yaml` describe dos servicios web y la base PostgreSQL para las cuentas Django. Al crear el Blueprint, completa `MONGODB_URL` (URI de Atlas), `ADMIN_API_TOKEN` y `CORE_API_TOKEN` con el mismo secreto. Asegúrate de permitir en Atlas las conexiones de red del servicio desplegado y de restringir el usuario de base de datos a los permisos mínimos necesarios. Swagger se publica en `/docs` en el servicio de la API.
+
+## Secuencia de commits
+
+La implementación se organiza linealmente en `main`, sin ramas de trabajo:
+
+1. `Clase 1: estructura, dependencias y esquemas`
+2. `Clase 2: API, portal Django y despliegue Render`
+
+Los commits se registran con la fecha real de creación; el plan de clases indica las fechas de referencia del curso.
